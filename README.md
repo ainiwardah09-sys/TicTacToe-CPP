@@ -1,2 +1,2 @@
 # TicTacToe-CPP
-GAme Tic-Tac-Toe menggunakan c++
+Game Tic-Tac-Toe menggunakan c++
