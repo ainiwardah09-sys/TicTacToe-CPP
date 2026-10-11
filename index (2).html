@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe</title>
+<style>
+  :root { color-scheme: dark; --bg:#100d1d; --panel:#1b1630; --cell:#282043; --purple:#a78bfa; --pink:#f0abfc; --muted:#b8afcf; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; display:grid; place-items:center; padding:24px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    color:#f8f5ff;
+    background: radial-gradient(ellipse at top, #30204f 0%, #171127 45%, #0d0a16 100%);
+  }
+  .app { width:min(100%, 440px); text-align:center; }
+  .eyebrow { color:var(--pink); font-size:.75rem; font-weight:800; letter-spacing:.22em; text-transform:uppercase; }
+  h1 { font-size:clamp(2.2rem, 10vw, 3.3rem); margin:10px 0 6px; letter-spacing:-.05em; }
+  h1 span { color:var(--purple); }
+  .subtitle { color:var(--muted); margin:0 0 24px; font-size:.95rem; }
+  .panel { background:rgba(27,22,48,.88); border:1px solid #453565; border-radius:24px; padding:22px; box-shadow:0 22px 60px #05030c88; }
+  .status { min-height:48px; display:grid; place-items:center; background:#120e20; border:1px solid #382b55; border-radius:14px; margin-bottom:16px; color:#e9ddff; font-weight:700; }
+  .status strong { color:var(--pink); }
+  .scoreboard { display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; margin-bottom:17px; }
+  .score { padding:10px 5px; background:#211a38; border-radius:13px; border:1px solid #382b55; }
+  .score .label { font-size:.72rem; color:var(--muted); }
+  .score .num { font-size:1.35rem; font-weight:800; margin-top:3px; }
+  .score.x .num { color:var(--purple); } .score.o .num { color:var(--pink); }
+  .board { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .cell { aspect-ratio:1; border:1px solid #49376d; border-radius:17px; background:linear-gradient(145deg,#2b2247,#201934); color:white; font-size:clamp(2.5rem, 13vw, 4rem); font-weight:800; cursor:pointer; transition:transform .14s, border-color .14s, background .14s; }
+  .cell:hover:enabled { transform:translateY(-2px); border-color:var(--purple); background:#342751; }
+  .cell:focus-visible, button:focus-visible { outline:3px solid var(--pink); outline-offset:3px; }
+  .cell:disabled { cursor:default; }
+  .cell.x { color:var(--purple); text-shadow:0 0 24px #a78bfa55; }
+  .cell.o { color:var(--pink); text-shadow:0 0 24px #f0abfc55; }
+  .cell.win { background:#44305f; border-color:#d8b4fe; }
+  .actions { display:flex; gap:10px; margin-top:18px; }
+  .actions button { flex:1; border:0; border-radius:12px; padding:13px 10px; font:inherit; font-weight:750; cursor:pointer; }
+  .primary { color:#171027; background:linear-gradient(110deg,#c4b5fd,#f0abfc); }
+  .secondary { color:#e9ddff; background:#2a2142; border:1px solid #49376d !important; }
+  .hint { color:#9388ae; font-size:.78rem; margin:17px 0 0; }
+  @media (max-width:380px) { .panel {padding:15px;} .board {gap:7px;} .cell {border-radius:12px;} }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="eyebrow">Mini Game</div>
+  <h1>Tic <span>Tac</span> Toe</h1>
+  <p class="subtitle">Tiga tanda sejajar, kamu menang!</p>
+  <section class="panel" aria-label="Permainan Tic Tac Toe">
+    <div class="status" id="status" aria-live="polite">Giliran pemain <strong>X</strong></div>
+    <div class="scoreboard" aria-label="Skor">
+      <div class="score x"><div class="label">PEMAIN X</div><div class="num" id="scoreX">0</div></div>
+      <div class="score"><div class="label">SERI</div><div class="num" id="scoreDraw">0</div></div>
+      <div class="score o"><div class="label">PEMAIN O</div><div class="num" id="scoreO">0</div></div>
+    </div>
+    <div class="board" id="board" role="group" aria-label="Papan permainan">
+      <button class="cell" data-index="0" aria-label="Kotak 1"></button>
+      <button class="cell" data-index="1" aria-label="Kotak 2"></button>
+      <button class="cell" data-index="2" aria-label="Kotak 3"></button>
+      <button class="cell" data-index="3" aria-label="Kotak 4"></button>
+      <button class="cell" data-index="4" aria-label="Kotak 5"></button>
+      <button class="cell" data-index="5" aria-label="Kotak 6"></button>
+      <button class="cell" data-index="6" aria-label="Kotak 7"></button>
+      <button class="cell" data-index="7" aria-label="Kotak 8"></button>
+      <button class="cell" data-index="8" aria-label="Kotak 9"></button>
+    </div>
+    <div class="actions">
+      <button class="primary" id="restart">Main Lagi ↻</button>
+      <button class="secondary" id="reset">Reset Skor</button>
+    </div>
+    <p class="hint">Pemain X mulai terlebih dahulu · Main bergantian</p>
+  </section>
+</main>
+<script>
+(() => {
+  const cells = [...document.querySelectorAll('.cell')];
+  const status = document.getElementById('status');
+  const scoreXEl = document.getElementById('scoreX');
+  const scoreOEl = document.getElementById('scoreO');
+  const scoreDrawEl = document.getElementById('scoreDraw');
+  const restart = document.getElementById('restart');
+  const reset = document.getElementById('reset');
+  const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  let board, current, active, scores;
+  function startGame() {
+    board = Array(9).fill('');
+    current = 'X';
+    active = true;
+    cells.forEach((cell, i) => {
+      cell.textContent = '';
+      cell.disabled = false;
+      cell.className = 'cell';
+      cell.setAttribute('aria-label', `Kotak ${i + 1}, kosong`);
+    });
+    status.innerHTML = 'Giliran pemain <strong>X</strong>';
+  }
+  function checkWin(player) {
+    return wins.find(combo => combo.every(i => board[i] === player));
+  }
+  function play(event) {
+    const cell = event.currentTarget;
+    const i = Number(cell.dataset.index);
+    if (!active || board[i]) return;
+    board[i] = current;
+    cell.textContent = current;
+    cell.classList.add(current.toLowerCase());
+    cell.setAttribute('aria-label', `Kotak ${i + 1}, ${current}`);
+    cell.disabled = true;
+    const winningCombo = checkWin(current);
+    if (winningCombo) {
+      active = false;
+      winningCombo.forEach(index => cells[index].classList.add('win'));
+      scores[current] += 1;
+      updateScores();
+      status.innerHTML = `Pemain <strong>${current}</strong> menang! 🎉`;
+      cells.forEach(c => c.disabled = true);
+      return;
+    }
+    if (board.every(Boolean)) {
+      active = false;
+      scores.draw += 1;
+      updateScores();
+      status.textContent = 'Permainan seri! 🤝';
+      return;
+    }
+    current = current === 'X' ? 'O' : 'X';
+    status.innerHTML = `Giliran pemain <strong>${current}</strong>`;
+  }
+  function updateScores() {
+    scoreXEl.textContent = scores.X;
+    scoreOEl.textContent = scores.O;
+    scoreDrawEl.textContent = scores.draw;
+  }
+  cells.forEach(cell => cell.addEventListener('click', play));
+  restart.addEventListener('click', startGame);
+  reset.addEventListener('click', () => {
+    scores = { X: 0, O: 0, draw: 0 };
+    updateScores();
+    startGame();
+  });
+  scores = { X: 0, O: 0, draw: 0 };
+  startGame();
+})();
+</script>
+</body>
+</html>
